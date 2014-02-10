@@ -1,50 +1,20 @@
 <?php
+error_reporting(E_ERROR | E_STRICT);
+ini_set('display_errors', 'on');
 
-include("classes/player.php");
-
-/*
-  This script example demonstrates an action which interrupts any music already playing, plays another track and then restores the initial player state.
-  
-  clock
-  psa
-  
-*/
-
-
-//This is just an example that can be set to your Sonos player IP.  
-$speaker_ip = '192.168.1.XX';
+require_once("classes/finder.php");
 
 //Get Speaker
-$player = SonosPlayer::getInstance($speaker_ip);
+$finder = SonosFinder::getInstance();
 
-//Find out if the speaker is playing
-$initial_status = $player->get_status();
+//Use your player name as this parameter
+$kitchen = $finder->getPlayerByName("Kitchen");
 
-$initial_track = array();
+echo $kitchen->volume(15);
+//echo $kitchen->play();
 
-//Grab current play info
-if($initial_status == SonosPlayer::PLAYING){
-  $initial_track = $player->get_current_track_info();
-}
-
-//Grab initial volume
-$initial_volume = $player->volume();
-
-//Do something here that interrupts playing
-$player->volume(10);
-
-
-//Restore initial track
-$player->play_from_queue($initial_track['track']);
-
-//Restore initial playhead state if a track was playing
-if($initial_status == PLAYING){
-  $player->seek($initial_track['playhead']);
-  $player->play();
-}
-
-//Turn volume back up to initial state
-$player->volume($initial_volume);
+/*  known issues and todo - resume tracks sometimes fails, spacing tracks out.  enhance: Error handling, xml parser, string parsers, pandora action
+*/
 
 
 ?>

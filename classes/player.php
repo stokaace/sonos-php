@@ -1,6 +1,20 @@
 <?php
 
-//TODO: Error handling parser, xml parser, pandora action
+
+/**
+  * queue_uri() 
+  * play()
+  * pause()
+  * volume()
+  * get_status()
+  * get_current_track_info()
+  * play_from_queue()
+  * get_speaker _info()
+  * seek()
+  * psa()  			- experimental
+  * setListener()  	- experimental
+  */
+
 
 class SonosPlayer {
   
@@ -24,7 +38,7 @@ class SonosPlayer {
 
   } 
 
-  public function play_uri($uri, $meta){
+  public function queue_uri($uri, $meta="na"){
 
     $body = str_replace("{uri}", $uri, self::PLAY_URI_BODY_TEMPLATE);
     $body = str_replace("{meta}", $meta, $body);
@@ -53,6 +67,19 @@ class SonosPlayer {
 
   }
 
+  public function pause(){
+
+    $response = $this->send_command(self::TRANSPORT_ENDPOINT, self::PAUSE_ACTION, self::PAUSE_BODY);
+  
+    if ($response == self::PAUSE_RESPONSE){
+      return true;
+    }
+    else{
+      return $this->parse_error($response);
+    }
+
+  }
+  
   
   public function volume($volume=""){
 
@@ -175,12 +202,13 @@ class SonosPlayer {
 
     //Grab initial volume
     $initial_volume = $this->volume();
+	//echo $initial_volume;
 
 	if(!empty($volume)){
 	  $this->volume($volume);
 	}
 	
-	$this->play_uri($uri);
+	$this->queue_uri($uri);
 	$this->play();
 	sleep($duration);
 	
@@ -253,6 +281,38 @@ class SonosPlayer {
 
   }
   
+  public function setListener($listener_url){
+    $listener_timeout = 60*60*24*3;
+    $headers = array("TIMEOUT:Second-".$listener_timeout, 
+					"CALLBACK:<".$listener_url.">",
+					"NT:upnp:event"
+					);
+
+    $url = 'http://' . $this->ip . ':1400/MediaRenderer/AVTransport/Event';
+   
+	$s = curl_init(); 
+		curl_setopt($s,CURLOPT_URL,$url); 
+		
+		curl_setopt($s,CURLOPT_HTTPHEADER,$headers); 
+		
+		curl_setopt($s,CURLOPT_TIMEOUT,4); 
+
+		curl_setopt($s, CURLOPT_CUSTOMREQUEST, 'SUBSCRIBE');
+		//curl_setopt($s, CURLOPT_POST, true);
+		
+		curl_setopt($s,CURLOPT_HEADER,false); 
+		curl_setopt($s, CURLOPT_RETURNTRANSFER, true);
+	  
+		$response = curl_exec($s);
+
+		$status = curl_getinfo($s,CURLINFO_HTTP_CODE); 
+    curl_close($s); 
+	
+    return $response;
+
+  return true;
+  }
+  
   const SOAP_TEMPLATE = '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>{body}</s:Body></s:Envelope>';
   const TRANSPORT_ENDPOINT = '/MediaRenderer/AVTransport/Control';
   const SET_TRANSPORT_ACTION = '"urn:schemas-upnp-org:service:AVTransport:1#SetAVTransportURI"';
@@ -283,7 +343,11 @@ class SonosPlayer {
 <Target>{track}</Target>
 </u:Seek>';
   const SEEK_TIMESTAMP_BODY_TEMPLATE = '<u:Seek xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Unit>REL_TIME</Unit><Target>{timestamp}</Target></u:Seek>';
+  const PAUSE_ACTION =  '"urn:schemas-upnp-org:service:AVTransport:1#Pause"';
+  const PAUSE_BODY = '<u:Pause xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID><Speed>1</Speed></u:Pause>';
+  const PAUSE_RESPONSE = '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:PauseResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"></u:PauseResponse></s:Body></s:Envelope>';
 
+  
 }
 
 
